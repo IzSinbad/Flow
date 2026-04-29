@@ -94,16 +94,9 @@ function WriteMode({ goTo }) {
 
   const handleSaveDraft = async () => {
     setStatus('thinking')
-    const geminiKey = import.meta.env.VITE_GEMINI_KEY || localStorage.getItem('flow_gemini_key')
-
-    if (!geminiKey) {
-      alert('Gemini API key required. Set it in settings.')
-      setStatus('listening')
-      return
-    }
 
     try {
-      const cleaned = await formatDraft(finalText + inProgressText, geminiKey)
+      const cleaned = await formatDraft(finalText + inProgressText)
       setFinalText(cleaned)
       setInProgressText('')
     } catch (error) {

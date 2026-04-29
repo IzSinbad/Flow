@@ -1,8 +1,27 @@
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import { VertexAI } from '@google-cloud/vertexai'
 
-// Debug: log what key is being used
-const keyLoaded = import.meta.env.VITE_GEMINI_KEY
-console.log('Gemini key loaded:', keyLoaded ? `${keyLoaded.slice(0, 10)}...${keyLoaded.slice(-10)}` : 'NOT FOUND')
+// Vertex AI configuration
+// These should be set via environment variables or Application Default Credentials
+const PROJECT_ID = 'flow-494823'  // Change to your Google Cloud project ID
+const LOCATION = 'us-central1'
+const MODEL_NAME = 'gemini-2.0-flash'
+
+console.log('Vertex AI configured for project:', PROJECT_ID)
+
+let vertexAI = null
+
+function initializeVertexAI() {
+  if (!vertexAI) {
+    try {
+      vertexAI = new VertexAI({ project: PROJECT_ID, location: LOCATION })
+      console.log('✅ Vertex AI initialized')
+    } catch (error) {
+      console.error('Failed to initialize Vertex AI:', error.message)
+      throw new Error('Vertex AI initialization failed. Make sure you have Google Cloud credentials configured.')
+    }
+  }
+  return vertexAI
+}
 
 function getSimplicityPrompt(simplicity) {
   const levels = {
@@ -13,17 +32,11 @@ function getSimplicityPrompt(simplicity) {
   return levels[simplicity] || levels.medium
 }
 
-export async function processDocument(rawText, simplicity, apiKey) {
-  if (!apiKey) {
-    console.error('API key is missing. Check your .env file.')
-    throw new Error('Gemini API key is required')
-  }
-
+export async function processDocument(rawText, simplicity) {
   try {
-    console.log('Using API key:', apiKey.slice(0, 10) + '...' + apiKey.slice(-10))
-    const client = new GoogleGenerativeAI(apiKey)
-    const model = client.getGenerativeModel({ model: 'gemini-2.0-flash' })
-    console.log('Gemini model initialized, sending request...')
+    console.log('Initializing Vertex AI...')
+    const vertexAIClient = initializeVertexAI()
+    const model = vertexAIClient.getGenerativeModel({ model: MODEL_NAME })
 
     const simplicityPrompt = getSimplicityPrompt(simplicity)
 
@@ -43,33 +56,30 @@ Return ONLY the reformatted text. No headers, no explanations, no markdown.
 Document to reformat:
 ${rawText.slice(0, 15000)}`
 
-    console.log('Sending request to Gemini...')
-    const result = await model.generateContent(prompt)
-    console.log('Response received:', result.response.text().slice(0, 100))
-    const text = result.response.text()
+    console.log('Sending request to Vertex AI (Gemini)...')
+    const response = await model.generateContent(prompt)
+    const text = response.response.text()
+
     if (!text) {
       throw new Error('No response from Gemini')
     }
+
+    console.log('Response received successfully')
     return text
   } catch (error) {
-    console.error('Gemini processDocument error:', error)
+    console.error('Vertex AI processDocument error:', error)
     console.error('Error details:', {
       message: error.message,
-      status: error.status,
       code: error.code
     })
     throw new Error(`Failed to process document: ${error.message}`)
   }
 }
 
-export async function generateSummary(rawText, simplicity, apiKey) {
-  if (!apiKey) {
-    throw new Error('Gemini API key is required')
-  }
-
+export async function generateSummary(rawText, simplicity) {
   try {
-    const client = new GoogleGenerativeAI(apiKey)
-    const model = client.getGenerativeModel({ model: 'gemini-2.0-flash' })
+    const vertexAIClient = initializeVertexAI()
+    const model = vertexAIClient.getGenerativeModel({ model: MODEL_NAME })
 
     const simplicityPrompt = getSimplicityPrompt(simplicity)
 
@@ -90,26 +100,24 @@ Return ONLY the summary. No headers, no explanations.
 Document to summarize:
 ${rawText.slice(0, 15000)}`
 
-    const result = await model.generateContent(prompt)
-    const text = result.response.text()
+    const response = await model.generateContent(prompt)
+    const text = response.response.text()
+
     if (!text) {
       throw new Error('No response from Gemini')
     }
+
     return text
   } catch (error) {
-    console.error('Gemini generateSummary error:', error)
+    console.error('Vertex AI generateSummary error:', error)
     throw new Error(`Failed to generate summary: ${error.message}`)
   }
 }
 
-export async function formatDraft(rawTranscript, apiKey) {
-  if (!apiKey) {
-    throw new Error('Gemini API key is required')
-  }
-
+export async function formatDraft(rawTranscript) {
   try {
-    const client = new GoogleGenerativeAI(apiKey)
-    const model = client.getGenerativeModel({ model: 'gemini-2.0-flash' })
+    const vertexAIClient = initializeVertexAI()
+    const model = vertexAIClient.getGenerativeModel({ model: MODEL_NAME })
 
     const prompt = `You are a writing assistant for people with dyslexia.
 
@@ -129,26 +137,24 @@ Return ONLY the cleaned text. No explanations or metadata.
 Raw transcript:
 ${rawTranscript}`
 
-    const result = await model.generateContent(prompt)
-    const text = result.response.text()
+    const response = await model.generateContent(prompt)
+    const text = response.response.text()
+
     if (!text) {
       throw new Error('No response from Gemini')
     }
+
     return text
   } catch (error) {
-    console.error('Gemini formatDraft error:', error)
+    console.error('Vertex AI formatDraft error:', error)
     throw new Error(`Failed to format draft: ${error.message}`)
   }
 }
 
-export async function askDocument(pdfText, conversationHistory, question, apiKey) {
-  if (!apiKey) {
-    throw new Error('Gemini API key is required')
-  }
-
+export async function askDocument(pdfText, conversationHistory, question) {
   try {
-    const client = new GoogleGenerativeAI(apiKey)
-    const model = client.getGenerativeModel({ model: 'gemini-2.0-flash' })
+    const vertexAIClient = initializeVertexAI()
+    const model = vertexAIClient.getGenerativeModel({ model: MODEL_NAME })
 
     // build conversation context
     let contextMessages = ''
@@ -176,14 +182,16 @@ User: ${question}
 
 Answer as Flow:`
 
-    const result = await model.generateContent(prompt)
-    const text = result.response.text()
+    const response = await model.generateContent(prompt)
+    const text = response.response.text()
+
     if (!text) {
       throw new Error('No response from Gemini')
     }
+
     return text
   } catch (error) {
-    console.error('Gemini askDocument error:', error)
+    console.error('Vertex AI askDocument error:', error)
     throw new Error(`Failed to answer question: ${error.message}`)
   }
 }

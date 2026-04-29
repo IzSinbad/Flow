@@ -27,19 +27,12 @@ function ReadMode({ goTo }) {
       const text = await extractText(file)
       setPdfText(text)
 
-      // process with gemini
-      const geminiKey = import.meta.env.VITE_GEMINI_KEY || localStorage.getItem('flow_gemini_key')
-      if (!geminiKey) {
-        showKeyModal('gemini')
-        setIsParsing(false)
-        return
-      }
-
-      const processed = await processDocument(text, simplicity, geminiKey)
+      // process with vertex ai (uses application default credentials)
+      const processed = await processDocument(text, simplicity)
       setProcessedText(processed)
 
       // generate summary
-      const summaryText = await generateSummary(text, simplicity, geminiKey)
+      const summaryText = await generateSummary(text, simplicity)
       setSummary(summaryText)
 
       setActiveSection('document')
@@ -76,15 +69,14 @@ function ReadMode({ goTo }) {
     if (!question.trim()) return
 
     setIsAsking(true)
-    const geminiKey = import.meta.env.VITE_GEMINI_KEY || localStorage.getItem('flow_gemini_key')
 
     try {
       // add user question to history
       const updatedHistory = [...conversationHistory, { role: 'user', text: question }]
       setConversationHistory(updatedHistory)
 
-      // get answer from gemini
-      const answer = await askDocument(pdfText, updatedHistory, question, geminiKey)
+      // get answer from vertex ai
+      const answer = await askDocument(pdfText, updatedHistory, question)
 
       // add flow response
       const finalHistory = [...updatedHistory, { role: 'flow', text: answer }]
@@ -108,11 +100,10 @@ function ReadMode({ goTo }) {
     setSimplicity(level)
     if (pdfText) {
       setIsParsing(true)
-      const geminiKey = import.meta.env.VITE_GEMINI_KEY || localStorage.getItem('flow_gemini_key')
       try {
-        const processed = await processDocument(pdfText, level, geminiKey)
+        const processed = await processDocument(pdfText, level)
         setProcessedText(processed)
-        const summaryText = await generateSummary(pdfText, level, geminiKey)
+        const summaryText = await generateSummary(pdfText, level)
         setSummary(summaryText)
       } catch (error) {
         console.error('Error reprocessing with new simplicity:', error)
@@ -122,15 +113,6 @@ function ReadMode({ goTo }) {
     }
   }
 
-  const showKeyModal = (type) => {
-    const key = prompt(`Enter your ${type === 'gemini' ? 'Gemini' : 'ElevenLabs'} API key:`)
-    if (key) {
-      localStorage.setItem(
-        type === 'gemini' ? 'flow_gemini_key' : 'flow_elevenlabs_key',
-        key
-      )
-    }
-  }
 
   // upload state
   if (!pdfText) {
