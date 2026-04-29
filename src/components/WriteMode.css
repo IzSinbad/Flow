@@ -1,0 +1,180 @@
+.write-mode-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: var(--bg-page);
+}
+
+.write-top-bar {
+  height: 52px;
+  background-color: var(--bg-page);
+  padding: 0 36px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: none;
+}
+
+.write-wordmark {
+  font-family: 'OpenDyslexic', serif;
+  font-weight: 700;
+  font-size: 22px;
+  color: var(--accent);
+  background: none;
+  border: none;
+  cursor: pointer;
+  margin: 0;
+  padding: 0;
+}
+
+.write-wordmark:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+
+.status-pill {
+  font-family: 'Nunito', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 6px 16px;
+  border-radius: 100px;
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.status-dot {
+  display: inline-block;
+  font-size: 12px;
+}
+
+.status-dot.blink {
+  animation: blink 1s infinite;
+}
+
+@keyframes blink {
+  0%, 49%, 100% {
+    opacity: 1;
+  }
+  50%, 99% {
+    opacity: 0.3;
+  }
+}
+
+.write-area {
+  flex: 1;
+  padding: 52px 80px;
+  overflow-y: auto;
+  position: relative;
+  max-width: 780px;
+  margin: 0 auto;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.empty-hint {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: 'OpenDyslexic', serif;
+  font-size: 18px;
+  font-style: italic;
+  color: var(--text-ghost);
+  text-align: center;
+  margin: 0;
+}
+
+.writing-content {
+  font-family: 'OpenDyslexic', serif;
+  font-size: 18px;
+  line-height: 2.0;
+  letter-spacing: 0.05em;
+  color: var(--text-body);
+}
+
+.final-text {
+  color: var(--text-body);
+}
+
+.in-progress-text {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.write-bottom-bar {
+  height: 60px;
+  background-color: var(--bg-page);
+  padding: 0 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.dev-button {
+  font-family: 'Nunito', sans-serif;
+  font-size: 12px;
+  padding: 7px 16px;
+  border-radius: 100px;
+  border: 1.5px solid var(--border);
+  background-color: transparent;
+  color: var(--text-ghost);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.dev-button:hover {
+  border-color: var(--text-muted);
+  color: var(--text-muted);
+}
+
+.bottom-buttons {
+  display: flex;
+  gap: 12px;
+}
+
+.copy-button {
+  font-family: 'Nunito', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 9px 22px;
+  border-radius: 100px;
+  border: 1.5px solid var(--border);
+  background-color: var(--bg-sunken);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.copy-button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.save-button {
+  font-family: 'Nunito', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 9px 24px;
+  border-radius: 100px;
+  border: none;
+  background-color: var(--accent);
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.save-button:hover {
+  background-color: var(--accent-deep);
+}
+
+.save-button:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
