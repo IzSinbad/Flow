@@ -3,3 +3,6 @@ node_modules
 dist
 .DS_Store
 *.local
+service-account-key.json
+service-account-key.json.json
+test-gemini.js
