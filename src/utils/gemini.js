@@ -1,5 +1,9 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
 
+// Debug: log what key is being used
+const keyLoaded = import.meta.env.VITE_GEMINI_KEY
+console.log('Gemini key loaded:', keyLoaded ? `${keyLoaded.slice(0, 10)}...${keyLoaded.slice(-10)}` : 'NOT FOUND')
+
 function getSimplicityPrompt(simplicity) {
   const levels = {
     low: 'Shorten sentences to max 16 words. Replace hard words with simple ones. Keep all information. Add a new paragraph every 3 sentences.',
@@ -11,12 +15,15 @@ function getSimplicityPrompt(simplicity) {
 
 export async function processDocument(rawText, simplicity, apiKey) {
   if (!apiKey) {
+    console.error('API key is missing. Check your .env file.')
     throw new Error('Gemini API key is required')
   }
 
   try {
+    console.log('Using API key:', apiKey.slice(0, 10) + '...' + apiKey.slice(-10))
     const client = new GoogleGenerativeAI(apiKey)
     const model = client.getGenerativeModel({ model: 'gemini-2.0-flash' })
+    console.log('Gemini model initialized, sending request...')
 
     const simplicityPrompt = getSimplicityPrompt(simplicity)
 
@@ -36,7 +43,9 @@ Return ONLY the reformatted text. No headers, no explanations, no markdown.
 Document to reformat:
 ${rawText.slice(0, 15000)}`
 
+    console.log('Sending request to Gemini...')
     const result = await model.generateContent(prompt)
+    console.log('Response received:', result.response.text().slice(0, 100))
     const text = result.response.text()
     if (!text) {
       throw new Error('No response from Gemini')
@@ -44,6 +53,11 @@ ${rawText.slice(0, 15000)}`
     return text
   } catch (error) {
     console.error('Gemini processDocument error:', error)
+    console.error('Error details:', {
+      message: error.message,
+      status: error.status,
+      code: error.code
+    })
     throw new Error(`Failed to process document: ${error.message}`)
   }
 }
