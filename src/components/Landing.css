@@ -1,0 +1,77 @@
+.landing-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background-color: var(--bg-page);
+  padding: 32px;
+}
+
+.landing-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 48px;
+}
+
+.wordmark {
+  font-family: 'OpenDyslexic', serif;
+  font-weight: 700;
+  font-size: 64px;
+  color: var(--accent);
+  text-align: center;
+  margin: 0;
+  letter-spacing: 0;
+}
+
+.cards-container {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.mode-card {
+  background-color: var(--bg-card);
+  border: 1.5px solid var(--border);
+  border-radius: 20px;
+  padding: 48px 52px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  min-width: 220px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  font-family: 'OpenDyslexic', serif;
+  font-weight: 700;
+  font-size: 18px;
+  color: var(--text-heading);
+  letter-spacing: 0.05em;
+  border: none;
+}
+
+.mode-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
+  border: 1.5px solid var(--accent);
+  border-radius: 20px;
+}
+
+.mode-card:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+
+.card-emoji {
+  font-size: 36px;
+  display: block;
+}
+
+.card-text {
+  font-family: 'OpenDyslexic', serif;
+  font-weight: 700;
+  font-size: 18px;
+  color: var(--text-heading);
+  letter-spacing: 0.05em;
+}

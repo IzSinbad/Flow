@@ -1,0 +1,21 @@
+:root {
+  --bg-page:       #FDF6EC;
+  --bg-surface:    #FFF8F0;
+  --bg-card:       #FFFCF7;
+  --bg-sunken:     #F5E8D0;
+  --bg-highlight:  #FDEEC8;
+  --text-heading:  #3B1F06;
+  --text-body:     #5C3412;
+  --text-muted:    #8A5A2F;
+  --text-ghost:    #B58A5F;
+  --accent:        #B8691A;
+  --accent-deep:   #8C4C10;
+  --accent-soft:   #F0C078;
+  --border:        #E8D5B5;
+  --border-focus:  #B8691A;
+  --shadow-sm:     0 2px 8px rgba(59,31,6,0.07);
+  --shadow-md:     0 6px 24px rgba(59,31,6,0.10);
+  --shadow-lg:     0 14px 48px rgba(59,31,6,0.13);
+  --dyslexia-bg:   #FEF9EE;
+  --dyslexia-text: #3B1F06;
+}
