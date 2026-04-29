@@ -18,7 +18,7 @@
 .write-wordmark {
   font-family: 'OpenDyslexic', serif;
   font-weight: 700;
-  font-size: 22px;
+  font-size: 32px;
   color: var(--accent);
   background: none;
   border: none;
@@ -82,7 +82,7 @@
   left: 50%;
   transform: translate(-50%, -50%);
   font-family: 'OpenDyslexic', serif;
-  font-size: 18px;
+  font-size: 28px;
   font-style: italic;
   color: var(--text-ghost);
   text-align: center;
@@ -91,8 +91,8 @@
 
 .writing-content {
   font-family: 'OpenDyslexic', serif;
-  font-size: 18px;
-  line-height: 2.0;
+  font-size: 28px;
+  line-height: 2.2;
   letter-spacing: 0.05em;
   color: var(--text-body);
 }

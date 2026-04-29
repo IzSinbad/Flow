@@ -17,7 +17,7 @@
 .wordmark {
   font-family: 'OpenDyslexic', serif;
   font-weight: 700;
-  font-size: 64px;
+  font-size: 96px;
   color: var(--accent);
   text-align: center;
   margin: 0;
@@ -35,17 +35,17 @@
   background-color: var(--bg-card);
   border: 1.5px solid var(--border);
   border-radius: 20px;
-  padding: 48px 52px;
+  padding: 72px 72px;
   cursor: pointer;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
-  min-width: 220px;
+  gap: 24px;
+  min-width: 280px;
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
   font-family: 'OpenDyslexic', serif;
   font-weight: 700;
-  font-size: 18px;
+  font-size: 28px;
   color: var(--text-heading);
   letter-spacing: 0.05em;
   border: none;
@@ -64,14 +64,14 @@
 }
 
 .card-emoji {
-  font-size: 36px;
+  font-size: 64px;
   display: block;
 }
 
 .card-text {
   font-family: 'OpenDyslexic', serif;
   font-weight: 700;
-  font-size: 18px;
+  font-size: 28px;
   color: var(--text-heading);
   letter-spacing: 0.05em;
 }
