@@ -16,7 +16,7 @@ function ReadMode({ goTo }) {
   const [currentAudio, setCurrentAudio] = useState(null)
 
   const handleFileSelect = async (file) => {
-    if (!file.type === 'application/pdf') {
+    if (file.type !== 'application/pdf') {
       alert('Please select a PDF file')
       return
     }
