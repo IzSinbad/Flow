@@ -13,6 +13,8 @@ function WriteMode({ goTo }) {
   const [recognition, setRecognition] = useState(null)
   const [isListening, setIsListening] = useState(false)
   const [recordingState, setRecordingState] = useState(null) // { promise, stop }
+  const [isEditing, setIsEditing] = useState(false)
+  const [editingText, setEditingText] = useState('')
 
   // Using ElevenLabs STT via mic button - old browser speech recognition removed
 
@@ -65,6 +67,27 @@ function WriteMode({ goTo }) {
     setTimeout(() => setCopiedFeedback(false), 1500)
   }
 
+  const handleEditClick = () => {
+    setEditingText(finalText + inProgressText)
+    setIsEditing(true)
+  }
+
+  const handleSaveEdit = () => {
+    setFinalText(editingText)
+    setInProgressText('')
+    setIsEditing(false)
+  }
+
+  const handleCancelEdit = () => {
+    setEditingText('')
+    setIsEditing(false)
+  }
+
+  const handleNewDraft = () => {
+    setFinalText('')
+    setInProgressText('')
+  }
+
   const handleMicClick = async () => {
     // If already recording, stop and process
     if (recordingState) {
@@ -108,17 +131,55 @@ function WriteMode({ goTo }) {
         setIsListening(false)
         setStatus('listening')
       } else {
-        // Send raw transcript to Gemini to polish it
-        console.log('Sending transcript to Gemini to polish it into professional tone')
+        // Check if transcript triggers content generation mode
+        // Keywords: "Specifically", "can you", "write", "create", "generate", "tell me", "explain", "make"
+        const lowerTranscript = transcript.trim().toLowerCase()
+
+        let isSpecificCommand = false
+        let textToProcess = transcript
+
+        // Check for each keyword explicitly and robustly
+        if (lowerTranscript.startsWith('specifically ') || lowerTranscript === 'specifically') {
+          isSpecificCommand = true
+          textToProcess = transcript.replace(/^specifically[\s,.:;!?]*/i, '').trim()
+        } else if (lowerTranscript.startsWith('can you ')) {
+          isSpecificCommand = true
+          textToProcess = transcript.replace(/^can you[\s,.:;!?]*/i, '').trim()
+        } else if (lowerTranscript.startsWith('write ') || lowerTranscript === 'write') {
+          isSpecificCommand = true
+          textToProcess = transcript.replace(/^write[\s,.:;!?]*/i, '').trim()
+        } else if (lowerTranscript.startsWith('create ') || lowerTranscript === 'create') {
+          isSpecificCommand = true
+          textToProcess = transcript.replace(/^create[\s,.:;!?]*/i, '').trim()
+        } else if (lowerTranscript.startsWith('generate ') || lowerTranscript === 'generate') {
+          isSpecificCommand = true
+          textToProcess = transcript.replace(/^generate[\s,.:;!?]*/i, '').trim()
+        } else if (lowerTranscript.startsWith('tell me ')) {
+          isSpecificCommand = true
+          textToProcess = transcript.replace(/^tell me[\s,.:;!?]*/i, '').trim()
+        } else if (lowerTranscript.startsWith('explain ') || lowerTranscript === 'explain') {
+          isSpecificCommand = true
+          textToProcess = transcript.replace(/^explain[\s,.:;!?]*/i, '').trim()
+        } else if (lowerTranscript.startsWith('make ') || lowerTranscript === 'make') {
+          isSpecificCommand = true
+          textToProcess = transcript.replace(/^make[\s,.:;!?]*/i, '').trim()
+        }
+
+        const mode = isSpecificCommand ? 'command' : 'polish'
+        console.log('[KEYWORD DETECTION] Transcript:', transcript)
+        console.log('[KEYWORD DETECTION] Is command mode:', isSpecificCommand, 'Mode:', mode)
+        console.log('[KEYWORD DETECTION] Text to process:', textToProcess)
+
         setStatus('thinking')
         try {
-          const polished = await formatDraft(transcript)
-          console.log('Got polished text back from Gemini:', polished)
-          setFinalText(polished)
+          const processed = await formatDraft(textToProcess, mode)
+          console.log('Got processed text back from Gemini:', processed)
+          // APPEND to existing text instead of replacing
+          setFinalText((prev) => prev ? prev + ' ' + processed : processed)
         } catch (error) {
-          console.error('Error polishing text:', error)
-          // If Gemini fails, just add raw text
-          setFinalText((prev) => prev + ' ' + transcript)
+          console.error('Error processing text:', error)
+          // If Gemini fails, just append raw text
+          setFinalText((prev) => prev ? prev + ' ' + textToProcess : textToProcess)
         } finally {
           setIsListening(false)
           setStatus('listening')
@@ -170,44 +231,86 @@ function WriteMode({ goTo }) {
       </header>
 
       <main className="write-area">
-        {!finalText && !inProgressText && (
+        {!finalText && !inProgressText && !isEditing && (
           <p className="empty-hint">click the microphone to start writing</p>
         )}
-        <div className="writing-wrapper">
-          <div className="writing-content">
-            <span className="final-text">{finalText}</span>
-            {inProgressText && (
-              <span className="in-progress-text">{inProgressText}</span>
-            )}
+        {isEditing ? (
+          <div className="writing-wrapper editing">
+            <textarea
+              className="edit-textarea"
+              value={editingText}
+              onChange={(e) => setEditingText(e.target.value)}
+              placeholder="Edit your text here..."
+            />
           </div>
-        </div>
+        ) : (
+          <div className="writing-wrapper">
+            <div className="writing-content">
+              <span className="final-text">{finalText}</span>
+              {inProgressText && (
+                <span className="in-progress-text">{inProgressText}</span>
+              )}
+            </div>
+          </div>
+        )}
       </main>
 
       <footer className="write-bottom-bar">
-        <button
-          className="record-button"
-          onClick={handleMicClick}
-          disabled={status === 'thinking'}
-          aria-label={recordingState ? 'Stop recording' : 'Start recording'}
-          title={recordingState ? 'Click again to stop' : "Click to start recording"}
-        >
-          <Icon name="microphone" alt="Microphone" size="18px" style={{ marginRight: '8px' }} />
-          Record
-        </button>
-        <div className="bottom-buttons">
-          <button
-            className="copy-button"
-            onClick={handleCopy}
-            title={copiedFeedback ? 'Copied!' : 'Copy to clipboard'}
-            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-          >
-            <Icon name="copy" alt="Copy" size="18px" />
-            {copiedFeedback ? 'Copied!' : 'Copy'}
-          </button>
-          <button className="save-button" onClick={handleSaveDraft}>
-            Polish Draft
-          </button>
-        </div>
+        {isEditing ? (
+          <>
+            <div className="bottom-buttons">
+              <button className="cancel-button" onClick={handleCancelEdit}>
+                Cancel
+              </button>
+              <button className="save-button" onClick={handleSaveEdit}>
+                Save Edit
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <button
+              className="record-button"
+              onClick={handleMicClick}
+              disabled={status === 'thinking'}
+              aria-label={recordingState ? 'Stop recording' : 'Start recording'}
+              title={recordingState ? 'Click again to stop' : "Click to start recording"}
+            >
+              <Icon name="microphone" alt="Microphone" size="18px" style={{ marginRight: '8px' }} />
+              Record
+            </button>
+            <div className="bottom-buttons">
+              <button
+                className="new-button"
+                onClick={handleNewDraft}
+                disabled={!finalText && !inProgressText}
+                title="Start a new draft"
+              >
+                New
+              </button>
+              <button
+                className="edit-button"
+                onClick={handleEditClick}
+                disabled={!finalText && !inProgressText}
+                title="Edit the text manually"
+              >
+                Edit
+              </button>
+              <button
+                className="copy-button"
+                onClick={handleCopy}
+                title={copiedFeedback ? 'Copied!' : 'Copy to clipboard'}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <Icon name="copy" alt="Copy" size="18px" />
+                {copiedFeedback ? 'Copied!' : 'Copy'}
+              </button>
+              <button className="save-button" onClick={handleSaveDraft}>
+                Polish Draft
+              </button>
+            </div>
+          </>
+        )}
       </footer>
     </div>
   )

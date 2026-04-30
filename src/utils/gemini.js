@@ -52,13 +52,13 @@ export async function generateSummary(rawText, simplicity) {
   }
 }
 
-export async function formatDraft(rawTranscript) {
+export async function formatDraft(rawTranscript, mode = 'polish') {
   try {
-    console.log('Calling backend to format draft...')
+    console.log(`Calling backend to format draft (mode: ${mode})...`)
     const response = await fetch(`${API_URL}/format-draft`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: rawTranscript })
+      body: JSON.stringify({ text: rawTranscript, mode })
     })
 
     if (!response.ok) {

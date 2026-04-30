@@ -152,54 +152,105 @@ ${text.slice(0, 100000)}`
 // Format draft
 app.post('/api/format-draft', async (req, res) => {
   try {
-    const { text } = req.body
+    const { text, mode = 'polish' } = req.body
 
-    // Check if user is asking for content generation
-    const isContentRequest = /^(can you|i need|write|tell me|explain|what is|how do|describe|create|generate|make)/i.test(text.trim())
+    console.log(`[FORMAT-DRAFT] Processing with mode: "${mode}"`)
+    console.log(`[FORMAT-DRAFT] Text to process: "${text.substring(0, 100)}..."`)
+
+    if (!text || text.trim().length === 0) {
+      console.error('[FORMAT-DRAFT] Error: No text provided')
+      return res.status(400).json({ error: 'Text is required' })
+    }
 
     let prompt
-    if (isContentRequest) {
-      // User is asking for content - generate it
-      prompt = `IMPORTANT: You are NOT polishing text. You are CREATING NEW CONTENT.
 
-The user has asked you to write or create something. Your job is to GENERATE that content from scratch.
-
-User's request:
+    if (mode === 'command') {
+      // User started with content generation keyword - do EXACTLY what they say
+      console.log('[FORMAT-DRAFT] Using COMMAND mode - generating content')
+      prompt = `YOU MUST GENERATE NEW CONTENT BASED ON THIS REQUEST:
 "${text}"
 
-Now write what they asked for. Follow these rules:
-- Write 3-4 brief paragraphs
-- Use short sentences (max 12-15 words each)
-- Add a blank line between paragraphs
-- Use simple, everyday words
-- Make it easy to understand
-- Do NOT say "Here is..." or "Below is..." - just provide the content
+CRITICAL FORMATTING - MUST FOLLOW EXACTLY:
 
-GENERATE THE CONTENT NOW. Write the essay, explanation, or description they asked for:`
+Your output format MUST be:
+[Sentence 1] [Sentence 2] [Sentence 3] [Sentence 4] [Sentence 5]
+
+[Sentence 6] [Sentence 7] [Sentence 8] [Sentence 9]
+
+Where:
+- Each group has 4-5 sentences
+- Sentences in a group are on THE SAME LINE separated by single spaces
+- A BLANK LINE separates each group of sentences
+- Each sentence ends with a period
+- NO line breaks within a sentence group
+- Keep sentences SHORT (max 12-15 words)
+- Use simple words
+- Write 3-4 sentence groups total
+
+REAL EXAMPLE OUTPUT:
+Global warming is a serious problem. Our Earth is getting much hotter. This change is happening very fast. Scientists are very concerned. Humans are causing most of this.
+
+We burn coal and oil for energy. Cars and factories do this every day. These activities release harmful gases. The gases trap heat in our air. This makes the planet warmer overall.
+
+Now generate the content following this exact format:`
     } else {
-      // User is dictating - polish their words
+      // mode === 'polish' (default) - User is dictating, fix grammar and remove fillers
+      console.log('[FORMAT-DRAFT] Using POLISH mode - fixing grammar and removing fillers')
       prompt = `You are a writing assistant for people with dyslexia.
 
-Your task: Polish this voice-to-text transcript.
+Your task: Polish this voice-to-text transcript AND add paragraph breaks for readability.
 
-Steps:
-1. Remove fillers: um, uh, uhm, uhmm, like (filler), you know, so like, etc.
-2. Fix grammar, punctuation, capitalization
-3. Fix any obvious speech-to-text errors
-4. Keep the user's voice and tone
-5. Add paragraph breaks if needed
+STEP 1 - Remove ALL fillers:
+- Remove: um, uh, uhm, uhmm, umm, ummm, like (when used as filler), you know, so like, basically, actually, literally, honestly, kind of, sort of, I mean
 
-Return ONLY the polished text. No explanations.
+STEP 2 - Fix GRAMMAR and sentence structure:
+- Fix double pronouns: "I , I" → "I" or "I , it" → keep only what makes sense
+- Fix capitalization: Every "i" that means the pronoun should be "I" (uppercase)
+- Remove orphaned commas: "I , dont" → "I don't"
+- Fix missing apostrophes: "dont" → "don't", "wont" → "won't", "cant" → "can't"
+- Fix obvious grammar errors that make sentences unclear
+- Ensure each sentence is grammatically complete
+- Fix run-on sentences by adding periods or commas
+
+STEP 3 - Add paragraph breaks for dyslexia-friendly reading:
+CRITICAL FORMAT:
+- Group sentences: 4-5 sentences per group
+- Each group goes on ONE LINE with spaces between sentences
+- Add ONE blank line between groups
+- NO line breaks except between groups
+- This makes it easier to read
+
+STEP 4 - Keep user's voice:
+- Do NOT change meaning or tone
+- Keep their personal style and word choices
+- Only fix what's grammatically broken
+
+EXAMPLE OUTPUT (with correct paragraph breaks):
+I think the plan is good. We should start soon. It will help everyone. This is important for us.
+
+We need to begin tomorrow. Everyone should be ready. Let's make this happen.
+
+(FORMAT: Sentences on same line. ONE blank line between groups. NO line breaks between sentences.)
+
+RULES:
+- Do NOT add new content
+- Do NOT change what the user is trying to say
+- Only remove fillers, fix grammar, and add paragraph breaks
+- Return ONLY the polished text with paragraph breaks
 
 Raw transcript:
 ${text}`
     }
 
+    console.log('[FORMAT-DRAFT] Sending to Gemini API...')
     const result = await callGemini(prompt)
+    console.log('[FORMAT-DRAFT] Got result from Gemini, length:', result.length)
+
     res.json({ text: result })
   } catch (error) {
-    console.error('Error:', error)
-    res.status(500).json({ error: error.message })
+    console.error('[FORMAT-DRAFT] Error occurred:', error.message)
+    console.error('[FORMAT-DRAFT] Full error:', error)
+    res.status(500).json({ error: error.message || 'Internal server error' })
   }
 })
 
