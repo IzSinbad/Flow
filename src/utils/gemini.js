@@ -1,197 +1,105 @@
-import { VertexAI } from '@google-cloud/vertexai'
-
-// Vertex AI configuration
-// These should be set via environment variables or Application Default Credentials
-const PROJECT_ID = 'flow-494823'  // Change to your Google Cloud project ID
-const LOCATION = 'us-central1'
-const MODEL_NAME = 'gemini-2.0-flash'
-
-console.log('Vertex AI configured for project:', PROJECT_ID)
-
-let vertexAI = null
-
-function initializeVertexAI() {
-  if (!vertexAI) {
-    try {
-      vertexAI = new VertexAI({ project: PROJECT_ID, location: LOCATION })
-      console.log('✅ Vertex AI initialized')
-    } catch (error) {
-      console.error('Failed to initialize Vertex AI:', error.message)
-      throw new Error('Vertex AI initialization failed. Make sure you have Google Cloud credentials configured.')
-    }
-  }
-  return vertexAI
-}
-
-function getSimplicityPrompt(simplicity) {
-  const levels = {
-    low: 'Shorten sentences to max 16 words. Replace hard words with simple ones. Keep all information. Add a new paragraph every 3 sentences.',
-    medium: 'Shorten sentences to max 12 words. Use simpler vocabulary. Keep main information clear. Use clear structure.',
-    high: 'Use max 8-10 word sentences. Very simple words only. Keep only the most important points. Make it very brief.',
-  }
-  return levels[simplicity] || levels.medium
-}
+const API_URL = 'http://localhost:3001/api'
 
 export async function processDocument(rawText, simplicity) {
   try {
-    console.log('Initializing Vertex AI...')
-    const vertexAIClient = initializeVertexAI()
-    const model = vertexAIClient.getGenerativeModel({ model: MODEL_NAME })
+    console.log('Calling backend to process document...')
+    const response = await fetch(`${API_URL}/process-document`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: rawText, simplicity })
+    })
 
-    const simplicityPrompt = getSimplicityPrompt(simplicity)
-
-    const prompt = `You are a reading assistant for people with dyslexia.
-
-Your task: Reformat this document for easier reading.
-
-${simplicityPrompt}
-
-Use dyslexia-friendly formatting:
-- Use clear, consistent spacing
-- Simple sentence structures
-- Short paragraphs
-
-Return ONLY the reformatted text. No headers, no explanations, no markdown.
-
-Document to reformat:
-${rawText.slice(0, 15000)}`
-
-    console.log('Sending request to Vertex AI (Gemini)...')
-    const response = await model.generateContent(prompt)
-    const text = response.response.text()
-
-    if (!text) {
-      throw new Error('No response from Gemini')
+    if (!response.ok) {
+      throw new Error(`Server error: ${response.status}`)
     }
 
-    console.log('Response received successfully')
-    return text
+    const data = await response.json()
+    if (!data.text) {
+      throw new Error('No response from server')
+    }
+
+    console.log('Document processed successfully')
+    return data.text
   } catch (error) {
-    console.error('Vertex AI processDocument error:', error)
-    console.error('Error details:', {
-      message: error.message,
-      code: error.code
-    })
+    console.error('Error processing document:', error)
     throw new Error(`Failed to process document: ${error.message}`)
   }
 }
 
 export async function generateSummary(rawText, simplicity) {
   try {
-    const vertexAIClient = initializeVertexAI()
-    const model = vertexAIClient.getGenerativeModel({ model: MODEL_NAME })
+    console.log('Calling backend to generate summary...')
+    const response = await fetch(`${API_URL}/generate-summary`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: rawText, simplicity })
+    })
 
-    const simplicityPrompt = getSimplicityPrompt(simplicity)
-
-    let maxSentences = 5
-    if (simplicity === 'high') maxSentences = 3
-    if (simplicity === 'low') maxSentences = 7
-
-    const prompt = `You are a reading assistant for people with dyslexia.
-
-Your task: Create a very brief summary of this document.
-
-${simplicityPrompt}
-
-Maximum ${maxSentences} sentences. Use simple words. Make it easy to understand.
-
-Return ONLY the summary. No headers, no explanations.
-
-Document to summarize:
-${rawText.slice(0, 15000)}`
-
-    const response = await model.generateContent(prompt)
-    const text = response.response.text()
-
-    if (!text) {
-      throw new Error('No response from Gemini')
+    if (!response.ok) {
+      throw new Error(`Server error: ${response.status}`)
     }
 
-    return text
+    const data = await response.json()
+    if (!data.text) {
+      throw new Error('No response from server')
+    }
+
+    console.log('Summary generated successfully')
+    return data.text
   } catch (error) {
-    console.error('Vertex AI generateSummary error:', error)
+    console.error('Error generating summary:', error)
     throw new Error(`Failed to generate summary: ${error.message}`)
   }
 }
 
 export async function formatDraft(rawTranscript) {
   try {
-    const vertexAIClient = initializeVertexAI()
-    const model = vertexAIClient.getGenerativeModel({ model: MODEL_NAME })
+    console.log('Calling backend to format draft...')
+    const response = await fetch(`${API_URL}/format-draft`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: rawTranscript })
+    })
 
-    const prompt = `You are a writing assistant for people with dyslexia.
-
-Your task: Clean up this messy voice transcript.
-
-Remove fillers: um, uh, uhm, uhmm, like (filler), you know, so like, etc.
-Fix grammar, punctuation, and capitalization.
-Detect the document type (email, letter, essay, message, note, report) and format appropriately.
-
-For emails: add "Dear [recipient]" if not present. Add closing signature if needed.
-For formal writing: use proper structure.
-
-Keep the user's original voice and tone. Don't over-edit.
-
-Return ONLY the cleaned text. No explanations or metadata.
-
-Raw transcript:
-${rawTranscript}`
-
-    const response = await model.generateContent(prompt)
-    const text = response.response.text()
-
-    if (!text) {
-      throw new Error('No response from Gemini')
+    if (!response.ok) {
+      throw new Error(`Server error: ${response.status}`)
     }
 
-    return text
+    const data = await response.json()
+    if (!data.text) {
+      throw new Error('No response from server')
+    }
+
+    console.log('Draft formatted successfully')
+    return data.text
   } catch (error) {
-    console.error('Vertex AI formatDraft error:', error)
+    console.error('Error formatting draft:', error)
     throw new Error(`Failed to format draft: ${error.message}`)
   }
 }
 
 export async function askDocument(pdfText, conversationHistory, question) {
   try {
-    const vertexAIClient = initializeVertexAI()
-    const model = vertexAIClient.getGenerativeModel({ model: MODEL_NAME })
-
-    // build conversation context
-    let contextMessages = ''
-    conversationHistory.forEach((msg) => {
-      contextMessages += `\n${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.text}`
+    console.log('Calling backend to answer question...')
+    const response = await fetch(`${API_URL}/ask-document`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pdfText, conversationHistory, question })
     })
 
-    const prompt = `You are Flow, a reading assistant for people with dyslexia.
-
-Your job: Answer questions about a document. Keep answers short and simple.
-
-Rules:
-- Max 4 sentences
-- Simple words only
-- No jargon
-- Short sentences (max 12 words each)
-
-Document:
-${pdfText.slice(0, 15000)}
-
-Conversation so far:
-${contextMessages}
-
-User: ${question}
-
-Answer as Flow:`
-
-    const response = await model.generateContent(prompt)
-    const text = response.response.text()
-
-    if (!text) {
-      throw new Error('No response from Gemini')
+    if (!response.ok) {
+      throw new Error(`Server error: ${response.status}`)
     }
 
-    return text
+    const data = await response.json()
+    if (!data.text) {
+      throw new Error('No response from server')
+    }
+
+    console.log('Question answered successfully')
+    return data.text
   } catch (error) {
-    console.error('Vertex AI askDocument error:', error)
+    console.error('Error asking document:', error)
     throw new Error(`Failed to answer question: ${error.message}`)
   }
 }

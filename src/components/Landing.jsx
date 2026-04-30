@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import Icon from './Icon'
 import './Landing.css'
 
 function Landing({ goTo }) {
@@ -15,8 +16,11 @@ function Landing({ goTo }) {
     recognition.onresult = (event) => {
       let interimTranscript = ''
       for (let i = event.resultIndex; i < event.results.length; i++) {
-        const transcript = event.results[i].transcript.toLowerCase()
-        if (event.results[i].isFinal) {
+        const result = event.results[i]
+        if (!result || !result.transcript) continue
+
+        const transcript = result.transcript.toLowerCase()
+        if (result.isFinal) {
           // check for "hey flow" or "hey flo"
           if (transcript.includes('hey flow') || transcript.includes('hey flo')) {
             const afterWake = transcript.split(/hey flo(w)?/i)[1] || ''
@@ -47,7 +51,7 @@ function Landing({ goTo }) {
             onClick={() => goTo('read')}
             aria-label="Read Mode"
           >
-            <span className="card-emoji">📖</span>
+            <Icon name="book" alt="Read Mode" size="64px" />
             <span className="card-text">Read Mode</span>
           </button>
 
@@ -56,7 +60,7 @@ function Landing({ goTo }) {
             onClick={() => goTo('write')}
             aria-label="Write Mode"
           >
-            <span className="card-emoji">🎙️</span>
+            <Icon name="microphone" alt="Write Mode" size="64px" />
             <span className="card-text">Write Mode</span>
           </button>
         </div>

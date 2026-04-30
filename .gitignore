@@ -6,3 +6,4 @@ dist
 service-account-key.json
 service-account-key.json.json
 test-gemini.js
+flow-app-key.json

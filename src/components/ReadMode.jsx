@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { extractText } from '../utils/pdfParser'
 import { processDocument, generateSummary, askDocument } from '../utils/gemini'
 import { speak, stopSpeaking } from '../utils/elevenlabs'
+import { recordAndTranscribe } from '../utils/elevenlabs-stt'
+import Icon from './Icon'
 import './ReadMode.css'
 
 function ReadMode({ goTo }) {
@@ -14,6 +16,9 @@ function ReadMode({ goTo }) {
   const [conversationHistory, setConversationHistory] = useState([])
   const [isAsking, setIsAsking] = useState(false)
   const [currentAudio, setCurrentAudio] = useState(null)
+  const [questionInput, setQuestionInput] = useState('')
+  const [isListening, setIsListening] = useState(false)
+  const [recordingState, setRecordingState] = useState(null) // { promise, stop }
 
   const handleFileSelect = async (file) => {
     if (file.type !== 'application/pdf') {
@@ -66,17 +71,25 @@ function ReadMode({ goTo }) {
   }
 
   const handleAsk = async (question) => {
-    if (!question.trim()) return
+    console.log('Got a question from the user:', question, 'Type:', typeof question)
+
+    if (!question || !question.trim()) {
+      console.warn('The question is empty, skipping it')
+      return
+    }
 
     setIsAsking(true)
 
     try {
       // add user question to history
       const updatedHistory = [...conversationHistory, { role: 'user', text: question }]
+      console.log('Updated the conversation history:', updatedHistory)
       setConversationHistory(updatedHistory)
 
-      // get answer from vertex ai
+      // get answer from gemini
+      console.log('Sending the question to Gemini')
       const answer = await askDocument(pdfText, updatedHistory, question)
+      console.log('Got the answer back from Gemini:', answer)
 
       // add flow response
       const finalHistory = [...updatedHistory, { role: 'flow', text: answer }]
@@ -113,11 +126,67 @@ function ReadMode({ goTo }) {
     }
   }
 
+  const handleMicClick = async () => {
+    // If already recording, stop and process
+    if (recordingState) {
+      console.log('Stopping the recording')
+      recordingState.stop()
+      setRecordingState(null)
+      return
+    }
+
+    // Otherwise, start recording
+    const elevenLabsKey = import.meta.env.VITE_ELEVENLABS_KEY || localStorage.getItem('flow_elevenlabs_key')
+
+    if (!elevenLabsKey) {
+      alert('ElevenLabs API key not configured')
+      return
+    }
+
+    setIsListening(true)
+    try {
+      const recordingPromise = await recordAndTranscribe(elevenLabsKey)
+      setRecordingState(recordingPromise)
+
+      // Wait for recording to finish
+      const transcript = await recordingPromise.promise
+      setRecordingState(null)
+      console.log('Got transcript:', transcript)
+
+      // Ignore empty transcripts
+      if (!transcript || transcript.trim().length < 3) {
+        console.log('Transcript is too short, skipping it')
+        setIsListening(false)
+        return
+      }
+
+      handleAsk(transcript)
+    } catch (error) {
+      console.error('Voice input error:', error)
+      if (!error.message.includes('corrupted') && !error.message.includes('invalid_audio')) {
+        alert(`Voice input error: ${error.message}`)
+      }
+      setRecordingState(null)
+      setIsListening(false)
+    } finally {
+      setIsListening(false)
+    }
+  }
+
 
   // upload state
   if (!pdfText) {
     return (
       <div className="read-mode-upload">
+        <header className="upload-header">
+          <button
+            className="upload-wordmark"
+            onClick={() => goTo('landing')}
+            aria-label="Back to home"
+          >
+            Flow
+          </button>
+        </header>
         {isParsing ? (
           <div className="spinner-container">
             <div className="spinner"></div>
@@ -176,7 +245,8 @@ function ReadMode({ goTo }) {
             className={`nav-item ${activeSection === 'ask' ? 'active' : ''}`}
             onClick={() => setActiveSection('ask')}
           >
-            🎙 Ask Flow
+            <Icon name="ask-flow" alt="Ask" size="18px" style={{ marginRight: '8px', verticalAlign: 'middle' }} />
+            Ask Flow
           </button>
         </nav>
       </aside>
@@ -199,16 +269,18 @@ function ReadMode({ goTo }) {
                   ))}
                 </div>
               </div>
+            </div>
+            <div className="document-wrapper">
               <button
-                className="audio-button"
+                className="audio-button doc-audio-button"
                 onClick={() => handlePlayAudio(processedText)}
                 aria-label="Play audio"
               >
-                🔊
+                <Icon name="speaker" alt="Play audio" size="24px" />
               </button>
-            </div>
-            <div className="document-content">
-              {processedText || 'Processing...'}
+              <div className="document-content">
+                {processedText || 'Processing...'}
+              </div>
             </div>
           </div>
         )}
@@ -217,15 +289,17 @@ function ReadMode({ goTo }) {
           <div className="summary-section">
             <h2 className="summary-title">Summary</h2>
             <hr className="summary-divider" />
-            <button
-              className="audio-button summary-audio"
-              onClick={() => handlePlayAudio(summary)}
-              aria-label="Play summary"
-            >
-              🔊
-            </button>
-            <div className="summary-content">
-              {summary || 'Generating summary...'}
+            <div className="summary-wrapper">
+              <button
+                className="audio-button summary-audio"
+                onClick={() => handlePlayAudio(summary)}
+                aria-label="Play summary"
+              >
+                <Icon name="speaker" alt="Play summary" size="24px" />
+              </button>
+              <div className="summary-content">
+                {summary || 'Generating summary...'}
+              </div>
             </div>
           </div>
         )}
@@ -234,7 +308,7 @@ function ReadMode({ goTo }) {
           <div className="ask-flow-section">
             <h2 className="ask-title">Ask Flow</h2>
             <p className="ask-subtitle">
-              Ask anything about this document using your voice. Flow will answer in plain language.
+              Ask anything about this document. Flow will answer in plain language.
             </p>
 
             <div className="conversation-area">
@@ -251,46 +325,60 @@ function ReadMode({ goTo }) {
                   )}
                 </div>
               ))}
+              {isAsking && (
+                <div className="chat-bubble flow">
+                  <em>Flow is thinking...</em>
+                </div>
+              )}
             </div>
 
             <div className="ask-input-area">
+              <input
+                type="text"
+                className="ask-text-input"
+                placeholder="Type or use voice..."
+                value={questionInput}
+                onChange={(e) => setQuestionInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && questionInput.trim()) {
+                    handleAsk(questionInput)
+                    setQuestionInput('')
+                  }
+                }}
+                disabled={isAsking || recordingState}
+              />
               <button
-                className="mic-button"
-                onClick={() => startVoiceInput(handleAsk)}
-                aria-label="Ask a question"
+                className={`mic-button ${recordingState ? 'recording' : ''}`}
+                onClick={handleMicClick}
+                disabled={isAsking}
+                aria-label={recordingState ? 'Stop recording' : 'Start recording'}
+                title={recordingState ? 'Click again to stop' : "Click to start recording"}
               >
-                🎤
+                {recordingState ? (
+                  <Icon name="recording-indicator" alt="Recording" size="24px" />
+                ) : (
+                  <Icon name="microphone" alt="Microphone" size="24px" />
+                )}
               </button>
-              <p className="ask-prompt">Ask a question</p>
+              <button
+                className="send-button"
+                onClick={() => {
+                  if (questionInput.trim()) {
+                    handleAsk(questionInput)
+                    setQuestionInput('')
+                  }
+                }}
+                disabled={isAsking || isListening || !questionInput.trim()}
+                aria-label="Send question"
+              >
+                →
+              </button>
             </div>
           </div>
         )}
       </main>
     </div>
   )
-}
-
-function startVoiceInput(onQuestion) {
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
-  if (!SpeechRecognition) {
-    alert('Speech recognition not supported')
-    return
-  }
-
-  const recognition = new SpeechRecognition()
-  recognition.lang = 'en-US'
-
-  recognition.onresult = (event) => {
-    let transcript = ''
-    for (let i = event.resultIndex; i < event.results.length; i++) {
-      transcript += event.results[i].transcript
-    }
-    if (event.results[event.results.length - 1].isFinal) {
-      onQuestion(transcript)
-    }
-  }
-
-  recognition.start()
 }
 
 export default ReadMode

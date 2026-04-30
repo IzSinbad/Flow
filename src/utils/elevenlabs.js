@@ -1,10 +1,24 @@
 let currentAudio = null
+let lastTTSTime = 0
+const TTS_THROTTLE_MS = 500 // minimum 500ms between TTS requests
 
 export async function speak(text, apiKey) {
   stopSpeaking()
 
+  if (!text) {
+    console.warn('No text provided to speak function')
+    return null
+  }
+
   if (apiKey) {
     try {
+      // throttle to prevent rate limiting
+      const timeSinceLast = Date.now() - lastTTSTime
+      if (timeSinceLast < TTS_THROTTLE_MS) {
+        await new Promise(resolve => setTimeout(resolve, TTS_THROTTLE_MS - timeSinceLast))
+      }
+      lastTTSTime = Date.now()
+
       // use elevenlabs tts
       const response = await fetch(
         'https://api.elevenlabs.io/v1/text-to-speech/21m00Tcm4TlvDq8ikWAM',
@@ -46,6 +60,7 @@ export async function speak(text, apiKey) {
 }
 
 function fallbackSpeech(text) {
+  if (!text) return null
   const utterance = new SpeechSynthesisUtterance(text.slice(0, 3000))
   utterance.rate = 0.88
   utterance.pitch = 1.0
